@@ -689,6 +689,10 @@
         }
 
         easyRelease(stream);
+
+		if (success)
+			evtImageDownloaded.notify(this, getLastImagePath());
+
         return success;
     }
 
@@ -717,6 +721,8 @@
         if(event == kEdsObjectEvent_DirItemRequestTransfer) {
             printf("kEdsObjectEvent_DirItemRequestTransfer!\n");
         }
+
+		return 0;
     }
 
     //------------------------------------------------------------------------
@@ -765,6 +771,8 @@
         if(inEvent == kEdsPropertyEvent_PropertyDescChanged) {
             printf("kEdsPropertyEvent_PropertyDescChanged - %s\n", prop.c_str());
         }
+
+		return 0;
     }
 	
 	//----------------------------------------------------------------------------
@@ -792,7 +800,9 @@
 		}
         if(inEvent == kEdsStateEvent_BulbExposureTime) {
             printf("kEdsStateEvent_BulbExposureTime");
-		}												
+		}
+
+		return 0;
 	}
 	
 

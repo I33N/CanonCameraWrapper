@@ -12,12 +12,10 @@
 #include "EDSDK.h"
 #include "EDSDKErrors.h"
 #include "EDSDKTypes.h"
+#include "Freeimage.h"
 
-#define HAVE_OF
 
-#ifdef HAVE_OF
-    #include "ofImage.h"
-#endif
+#include "ofMain.h"
 
 #ifndef BYTE
 	#define BYTE unsigned char
@@ -38,6 +36,19 @@ static void easyRelease(EdsBaseRef &ref){
         ref = NULL;
     }
 }
+
+static void putBmpIntoPixels(FIBITMAP * bmp, ofPixels &pix){
+	int width			= FreeImage_GetWidth(bmp);
+	int height			= FreeImage_GetHeight(bmp);
+	int bpp				= FreeImage_GetBPP(bmp);
+	int bytesPerPixel	= bpp / 8;
+	//------------------------------------------
+	// call the allocation routine (which checks if really need to allocate) here
+
+	pix.allocate(width, height, OF_IMAGE_COLOR);
+	FreeImage_ConvertToRawBits(pix.getPixels(), bmp, width*bytesPerPixel, bpp, FI_RGBA_RED_MASK, FI_RGBA_GREEN_MASK, FI_RGBA_BLUE_MASK, true);  // get bits
+}
+
 
 class memoryImage : public ofImage{
 
@@ -75,12 +86,12 @@ class memoryImage : public ofImage{
 
         //FreeImage_FlipVertical(tmpBmp);
 
-        putBmpIntoPixels(tmpBmp, myPixels);
+        putBmpIntoPixels(tmpBmp, getPixelsRef());
         width 		= FreeImage_GetWidth(tmpBmp);
         height 		= FreeImage_GetHeight(tmpBmp);
         bpp 		= FreeImage_GetBPP(tmpBmp);
 
-        swapRgb(myPixels);
+        swapRgb(getPixelsRef());
 
         FreeImage_Unload(tmpBmp);
         FreeImage_CloseMemory(hmem);
@@ -91,16 +102,16 @@ class memoryImage : public ofImage{
 
     //shouldn't have to redefine this but a gcc bug means we do
     inline void	swapRgb(ofPixels &pix){
-        if (pix.bitsPerPixel != 8){
-            int sizePixels		= pix.width*pix.height;
+        if (pix.getBitsPerPixel() != 8){
+            int sizePixels		= pix.getWidth()*pix.getHeight();
             int cnt				= 0;
             unsigned char temp;
-            int byteCount		= pix.bitsPerPixel/8;
+            int byteCount		= pix.getBitsPerPixel()/8;
 
             while (cnt < sizePixels){
-                temp					        = pix.pixels[cnt*byteCount];
-                pix.pixels[cnt*byteCount]		= pix.pixels[cnt*byteCount+2];
-                pix.pixels[cnt*byteCount+2]		= temp;
+                temp					        = pix.getPixels()[cnt*byteCount];
+                pix.getPixels()[cnt*byteCount]		= pix.getPixels()[cnt*byteCount+2];
+                pix.getPixels()[cnt*byteCount+2]		= temp;
                 cnt++;
             }
         }
@@ -120,6 +131,7 @@ class CanonCameraWrapper{
     CanonCameraWrapper();
     ~CanonCameraWrapper();
 
+	ofEvent<string>	evtImageDownloaded;
     //---------------------------------------------------------------------
     //  SDK AND SESSION MANAGEMENT
     //---------------------------------------------------------------------
@@ -174,8 +186,8 @@ class CanonCameraWrapper{
     //  MISC EXTRA STUFF
     //---------------------------------------------------------------------
 
-    string getLastImageName();  //The full path of the last downloaded image
-    string getLastImagePath();  //The name of the last downloaded image
+    string getLastImageName();  //The name of the last downloaded image
+    string getLastImagePath();  //The full path of the last downloaded image
 
     //This doesn't work perfectly - for some reason it can be one image behind
     //something about how often the camera updates the SDK.
